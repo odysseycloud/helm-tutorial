@@ -22,12 +22,6 @@ ingress:
 
 resources: {}
 
-# config:
-#   media:
-#     url: ''
-#   monitoring: 
-#     enabled: false
-
 nodeSelector: {}
 
 tolerations: []
