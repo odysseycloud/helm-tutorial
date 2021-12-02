@@ -1,0 +1,55 @@
+{{- $values := .Values | toString -}}
+{{- $parentTemplateScope := . -}}
+{{- range $ingressName := regexFindAll "ingress-.*?([^:]+)" $values -1 -}}
+{{- $ingress := index $.Values . -}}
+{{- if $ingress.enabled -}}
+{{- $fullName := include "chart.fullname" $parentTemplateScope -}}
+{{- $ingressPath := $ingress.path -}}
+{{- $ingressPathType := $ingress.pathType -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $fullName }}-{{ . }}
+  labels:
+    app: {{ include "chart.name" $parentTemplateScope }}
+    chart: {{ include "chart.chart" $parentTemplateScope }}
+    release: {{ $parentTemplateScope.Release.Name }}
+    heritage: {{ $parentTemplateScope.Release.Service }}
+{{- with $ingress.annotations }}    
+  annotations:
+{{ toYaml . | indent 4 }}  
+{{- end }}
+spec: 
+{{- if $ingress.tls }}
+  tls:
+  {{- range $ingress.tls }}
+  - hosts:
+    {{- range .hosts }}
+    - {{ . | quote }}
+    {{- end }}
+    secretName: {{ .secretName }}
+  {{- end }}
+{{- end }}
+  rules:
+  {{- range $ingress.hosts }}  
+  - host: {{ . | quote }}
+    http:
+      paths:
+        - path: /oc-github-push
+          pathType: Prefix
+          backend:
+            service:
+              name: oc-github-webhook-eventsource-svc
+              port: 
+                number: 15000      
+        - path: {{ $ingressPath }}
+          pathType: {{ $ingressPathType }}
+          backend:
+            service:
+              name: {{ $fullName }}
+              port: 
+                number: 80                
+  {{- end }}
+{{ (printf "---") -}}  
+{{ end }}
+{{- end }}
